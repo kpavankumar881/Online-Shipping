@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shopping</title>
+<link
+  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  rel="stylesheet"
+/>
+<link
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+  rel="stylesheet"
+/>
+<style>
+  body {
+    padding: 1rem;
+  }
+  main {
+    height: 500px;
+    overflow-y: auto;
+  }
+  .card {
+    width: 200px;
+  }
+  .card-header {
+    height: 150px;
+    overflow: hidden;
+  }
+  .card img {
+    height: 130px;
+    object-fit: contain;
+  }
+  #cartCount {
+    font-weight: bold;
+    margin-left: 5px;
+  }
+</style>
+</head>
+<body>
+<header class="bg-danger text-white text-center p-3 mb-3">
+  <h1><i class="bi bi-cart4"></i> Shopping</h1>
+</header>
+<div class="row">
+  <nav class="col-2">
+    <label for="lstcategory" class="form-label">Select Category</label>
+    <select id="lstcategory" class="form-select mb-3"></select>
+  </nav>
+  <main class="col-8 d-flex flex-wrap gap-3"></main>
+  <aside class="col-2 text-center">
+    <button
+      id="btnCart"
+      class="btn btn-danger w-100 mb-2"
+      data-bs-toggle="modal"
+      data-bs-target="#cartModal"
+    >
+      <i class="bi bi-cart"></i> Cart <span id="cartCount">0</span>
+    </button>
+  </aside>
+</div>
+
+<!-- Modal for Cart -->
+<div
+  class="modal fade"
+  id="cartModal"
+  tabindex="-1"
+  aria-labelledby="cartModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cartModalLabel">Your Cart Items</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Price</th>
+              <th>Preview</th>
+            </tr>
+          </thead>
+          <tbody id="cartTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+></script>
+<script>
+  const lstCategory = document.getElementById("lstcategory");
+  const mainContainer = document.querySelector("main");
+  const cartCount = document.getElementById("cartCount");
+  const cartTableBody = document.getElementById("cartTableBody");
+  let cartItems = [];
+
+  // Load categories dropdown
+  function loadCategories() {
+    fetch("https://fakestoreapi.com/products/categories")
+      .then((res) => res.json())
+      .then((categories) => {
+        categories.unshift("all");
+        lstCategory.innerHTML = "";
+        categories.forEach((cat) => {
+          const option = document.createElement("option");
+          option.value = cat;
+          option.textContent = cat.toUpperCase();
+          lstCategory.appendChild(option);
+        });
+      });
+  }
+
+  // Load products for selected category
+  function loadProducts(category = "all") {
+    mainContainer.innerHTML = "";
+    const url =
+      category === "all"
+        ? "https://fakestoreapi.com/products"
+        : `https://fakestoreapi.com/products/category/${category}`;
+    fetch(url)
+      .then((res) => res.json())
+      .then((products) => {
+        products.forEach((product) => {
+          const div = document.createElement("div");
+          div.className = "card m-2 p-2";
+          div.style.width = "200px";
+          div.innerHTML = `
+            <img src="${product.image}" class="card-img-top" alt="${product.title}" />
+            <div class="card-header"><p>${product.title}</p></div>
+            <div class="card-body">
+              <dl>
+                <dt>Price</dt><dd>$${product.price.toFixed(2)}</dd>
+                <dt>Rating</dt>
+                <dd><i class="bi bi-star-fill text-success"></i> ${product.rating.rate} [${product.rating.count}]</dd>
+              </dl>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-danger w-100" onclick="addToCart(${product.id})">
+                <i class="bi bi-cart2"></i> Add to cart
+              </button>
+            </div>`;
+          mainContainer.appendChild(div);
+        });
+      });
+  }
+
+  // Add product to cart by ID
+  function addToCart(id) {
+    fetch(`https://fakestoreapi.com/products/${id}`)
+      .then((res) => res.json())
+      .then((product) => {
+        cartItems.push(product);
+        updateCartCount();
+        alert(`${product.title} added to cart.`);
+      });
+  }
+
+  // Update cart count badge
+  function updateCartCount() {
+    cartCount.textContent = cartItems.length;
+  }
+
+  // Show cart items in modal
+  function showCartItems() {
+    cartTableBody.innerHTML = "";
+    if (cartItems.length === 0) {
+      cartTableBody.innerHTML =
+        '<tr><td colspan="3" class="text-center">Your cart is empty.</td></tr>';
+      return;
+    }
+    cartItems.forEach((item) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.title}</td>
+        <td>$${item.price.toFixed(2)}</td>
+        <td><img src="${item.image}" alt="${item.title}" width="50" height="50" /></td>
+      `;
+      cartTableBody.appendChild(tr);
+    });
+  }
+
+  // Event listeners
+  lstCategory.addEventListener("change", () => {
+    loadProducts(lstCategory.value);
+  });
+
+  // Show cart modal items when modal is opened
+  const cartModal = document.getElementById("cartModal");
+  cartModal.addEventListener("show.bs.modal", showCartItems);
+
+  // On page load
+  window.onload = () => {
+    loadCategories();
+    loadProducts();
+  };
+</script>
+</body>
+</html>
+
